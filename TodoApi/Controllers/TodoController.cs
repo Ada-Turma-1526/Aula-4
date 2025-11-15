@@ -1,26 +1,30 @@
 ﻿
 using Microsoft.AspNetCore.Mvc;
 using TodoApi.Models;
+using TodoApi.Repositories;
 
 namespace TodoApi.Controllers
 {
     public class TodoController : ControllerBase
     {
+        private readonly ITodoRepository todoRepository;
+        public TodoController(ITodoRepository todoRepository) 
+            => this.todoRepository = todoRepository;
+
         [Route("/api/todo")] // GET /api/todo
         public IActionResult GetAllTodos()
         {
-            return Ok(TodoList.Tasks.Values);
+            return Ok(todoRepository.GetAll());
         }
 
         [Route("/api/todo/{id}")] // GET /api/todo/4
         public IActionResult GetTodoById(int id)
         {
-            if (!TodoList.Tasks.ContainsKey(id))
-            {
+            var todo = todoRepository.GetById(id);
+            if (todo == null)
                 return NotFound();
-            }
 
-            return Ok(TodoList.Tasks[id]);
+            return Ok(todo);
         }
 
         [HttpPost]
@@ -28,12 +32,12 @@ namespace TodoApi.Controllers
         // Model Binding
         public IActionResult CreateTodo([FromBody] Todo todo)
         {
-            if (TodoList.Tasks.ContainsKey(todo.Id))
-                return Conflict(todo);
+            var existingTodo = todoRepository.GetById(todo.Id);
+            if (existingTodo != null)
+                return Conflict(existingTodo);
 
-            TodoList.Tasks.Add(todo.Id, todo);
-
-            return Created(); //asp.net vai mudar para um No Content.
+            todo = todoRepository.Create(todo);
+            return Created();
         }
 
         [HttpPut]
@@ -44,27 +48,27 @@ namespace TodoApi.Controllers
             if (id != todo.Id)
                 return BadRequest();
 
-            if (!TodoList.Tasks.ContainsKey(id))
+            var existingTodo = todoRepository.GetById(todo.Id);
+            if (existingTodo == null)
                 return NotFound();
 
-            var existing = TodoList.Tasks[id];
+            existingTodo.Title = todo.Title;
+            existingTodo.Description = todo.Description;
+            existingTodo.IsCompleted = todo.IsCompleted;
 
-            existing.Title = todo.Title;
-            existing.Description = todo.Description;
-            existing.IsCompleted = todo.IsCompleted;
-
-            return Ok(existing);
+            var retorno = todoRepository.Update(existingTodo);
+            return Ok(retorno);
         }
 
         [HttpDelete] 
         [Route("/api/todo/{id}")]
         public IActionResult Delete(int id)
         {
-            if (!TodoList.Tasks.ContainsKey(id))
+            var existingTodo = todoRepository.GetById(id);
+            if (existingTodo == null)
                 return NotFound();
 
-            TodoList.Tasks.Remove(id);
-
+            todoRepository.Delete(id);
             return NoContent();
         }
     }

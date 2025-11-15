@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using TodoApi.Repositories;
 
 namespace TodoApi
 {
@@ -13,6 +14,7 @@ namespace TodoApi
 
             // Configurar serviços (Injeção de Dependência)
             builder.Services.AddControllers();
+            builder.Services.AddScoped<ITodoRepository, TodoRepository>();
 
             // Constroi a aplicação (builder.Build())
             var app = builder.Build();
